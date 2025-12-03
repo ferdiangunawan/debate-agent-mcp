@@ -1,11 +1,14 @@
 # Dependencies
 node_modules/
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
 
 # Build output
 dist/
+*.tsbuildinfo
+
+# Package manager locks (use workspace root)
+packages/*/package-lock.json
+packages/*/pnpm-lock.yaml
+packages/*/yarn.lock
 
 # IDE
 .vscode/
@@ -28,5 +31,9 @@ yarn-error.log*
 .env
 .env.local
 
-# TypeScript
-*.tsbuildinfo
+# VS Code Extension
+packages/vscode-extension/*.vsix
+
+# Test files
+coverage/
+.nyc_output/

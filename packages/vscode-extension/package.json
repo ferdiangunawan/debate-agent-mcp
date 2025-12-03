@@ -1,0 +1,78 @@
+{
+    "name": "debate-agent-mcp",
+    "displayName": "Debate Agent MCP",
+    "description": "Multi-agent code review & debate planning with P0/P1/P2 severity scoring - auto-configures MCP for VS Code",
+    "version": "1.0.0",
+    "publisher": "your-publisher-id",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ferdiangunawan/debate-agent-mcp"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Linters",
+        "Other"
+    ],
+    "keywords": [
+        "mcp",
+        "code-review",
+        "debate",
+        "multi-agent",
+        "ai",
+        "copilot"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "debateAgent.configure",
+                "title": "Debate Agent: Configure MCP Server"
+            },
+            {
+                "command": "debateAgent.showStatus",
+                "title": "Debate Agent: Show Status"
+            }
+        ],
+        "configuration": {
+            "title": "Debate Agent MCP",
+            "properties": {
+                "debateAgent.autoConfigureMcp": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically configure MCP server in VS Code settings on activation"
+                },
+                "debateAgent.defaultAgents": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "codex",
+                        "claude"
+                    ],
+                    "description": "Default agents to use for debate reviews"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run build",
+        "build": "node esbuild.js",
+        "dev": "node esbuild.js --watch",
+        "package": "vsce package",
+        "publish": "vsce publish",
+        "clean": "rm -rf dist"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.85.0",
+        "@vscode/vsce": "^2.22.0",
+        "esbuild": "^0.19.0",
+        "typescript": "^5.0.0"
+    }
+}

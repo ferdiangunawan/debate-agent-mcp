@@ -1,0 +1,37 @@
+{
+    "name": "@debate-agent/core",
+    "version": "1.0.0",
+    "description": "Core logic for multi-agent debate with P0/P1/P2 code review and debate planning",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js",
+        "./types": "./dist/types.js",
+        "./engine": "./dist/engine/index.js",
+        "./prompts": "./dist/prompts/index.js",
+        "./config": "./dist/config.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "debate",
+        "code-review",
+        "multi-agent",
+        "p0-p1-p2",
+        "ai-agents"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

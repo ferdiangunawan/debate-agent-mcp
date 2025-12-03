@@ -1,266 +1,212 @@
-# debate-reviewer-mcp
+# Debate Agent MCP
 
-A local MCP (Model Context Protocol) server that performs agent debate between multiple CLI-based LLM agents (Codex CLI, Claude Code CLI) with a deterministic rule-based judge.
+A multi-agent debate framework for **code review** and **debate planning** with P0/P1/P2 severity scoring.
+
+## Packages
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| [`@debate-agent/core`](./packages/core) | Core logic (framework-agnostic) | `npm i @debate-agent/core` |
+| [`@debate-agent/mcp-server`](./packages/mcp-server) | MCP server for CLI users | `npm i -g @debate-agent/mcp-server` |
+| [`debate-agent-mcp`](./packages/vscode-extension) | VS Code extension | Install from marketplace |
+
+## Quick Start
+
+### For VS Code Users (One-Click Install)
+
+1. Install **Debate Agent MCP** from VS Code Marketplace
+2. Extension auto-configures MCP on activation
+3. Use `@mcp` in Copilot Chat to access debate tools
+
+### For CLI Users
+
+```bash
+# Install globally
+npm install -g @debate-agent/mcp-server
+
+# Start MCP server
+debate-agent
+
+# Or run directly
+npx @debate-agent/mcp-server
+```
+
+### For SDK Users
+
+```bash
+npm install @debate-agent/core
+```
+
+```typescript
+import { runDebate, createDebatePlan } from '@debate-agent/core';
+
+// Run code review debate
+const result = await runDebate({
+  question: 'Review this code for security issues',
+  agents: ['codex', 'claude'],
+  platform: 'backend',
+});
+
+// Create debate plan
+const plan = createDebatePlan('Best caching strategy', ['codex', 'claude'], 'collaborative', 2);
+```
 
 ## Features
 
-- **Agent Debate**: Run both Codex and Claude CLI agents on your code changes
-- **Deterministic Scoring**: Rule-based judge with transparent scoring
-- **Critique Round**: Optional critique round where agents critique each other
-- **Merged Recommendations**: Combines insights from both agents into a final recommendation
+- **Multi-Agent Debate**: Run 2, 3, or more agents on your code changes
+- **P0/P1/P2 Severity**: Structured findings with priority levels
+- **Debate Planning**: Create structured debate plans with different modes
+- **Platform-Specific Rules**: Specialized scrutiny for Flutter, Android, iOS, Backend
+- **Deterministic Scoring**: Transparent rule-based judge system
+- **Merged Recommendations**: Combines insights from all agents
 - **100% Local**: No network requests, all processing happens locally
 
-## Installation
+## MCP Tools
 
-### Prerequisites
-
-- Node.js >= 18.0.0
-- pnpm (or npm/yarn)
-- Codex CLI (`/opt/homebrew/bin/codex` or configure in `config.json`)
-- Claude Code CLI (`/opt/homebrew/bin/claude` or configure in `config.json`)
-
-### Setup
-
-```bash
-# Navigate to the project directory
-cd debate-reviewer-mcp
-
-# Install dependencies
-pnpm install
-
-# Build TypeScript
-pnpm build
-```
+| Tool | Description |
+|------|-------------|
+| `list_agents` | List all configured agents |
+| `read_diff` | Read uncommitted git diff |
+| `run_agent` | Run a single agent with prompt |
+| `debate_review` | Multi-agent P0/P1/P2 code review |
+| `debate_plan` | Create structured debate plan |
 
 ## Configuration
 
-Edit `config.json` to configure CLI paths and settings:
+Create `debate-agent.config.json` in your project root:
 
 ```json
 {
   "agents": {
     "codex": {
+      "name": "codex",
       "path": "/opt/homebrew/bin/codex",
-      "args": ["--print", "--prompt"],
-      "timeout_seconds": 120
+      "args": ["exec", "--skip-git-repo-check"],
+      "timeout_seconds": 180
     },
     "claude": {
+      "name": "claude",
       "path": "/opt/homebrew/bin/claude",
-      "args": ["--print", "--dangerously-skip-permissions", "-p"],
-      "timeout_seconds": 120
+      "args": ["--print", "--dangerously-skip-permissions"],
+      "timeout_seconds": 180
+    },
+    "gemini": {
+      "name": "gemini",
+      "path": "/opt/homebrew/bin/gemini",
+      "args": ["--prompt"],
+      "timeout_seconds": 180
     }
   },
   "debate": {
+    "default_agents": ["codex", "claude"],
     "include_critique_round": true,
-    "max_output_length": 10000
-  },
-  "git": {
-    "include_staged": false,
-    "max_diff_lines": 1000
+    "default_mode": "adversarial"
   }
 }
 ```
 
-## MCP Tools
+## Severity Levels
 
-### 1. `read_diff`
+| Level | Criteria |
+|-------|----------|
+| **P0** | Breaking defects, crashes, data loss, security/privacy problems, build blockers |
+| **P1** | Likely bugs/regressions, incorrect logic, missing error-handling, missing tests |
+| **P2** | Minor correctness issues, small logic gaps, non-blocking test gaps |
 
-Read uncommitted git diff from the repository.
+## Debate Modes
 
-**Input:**
-```json
-{
-  "staged": false,
-  "path": "/path/to/repo"
-}
-```
-
-**Output:**
-```json
-{
-  "diff": "...",
-  "file_count": 3,
-  "files": ["src/index.ts", "src/utils.ts", "package.json"]
-}
-```
-
-### 2. `run_agent`
-
-Run a single CLI-based LLM agent with a prompt.
-
-**Input:**
-```json
-{
-  "agent": "codex",
-  "prompt": "Review this code for bugs",
-  "context": "optional context"
-}
-```
-
-**Output:**
-```json
-{
-  "output": "Agent's response...",
-  "exit_code": 0,
-  "duration_ms": 5000
-}
-```
-
-### 3. `debate_review`
-
-Run both agents on uncommitted changes and produce a final judged output.
-
-**Input:**
-```json
-{
-  "question": "Review this code for bugs and security issues",
-  "includeCritique": true,
-  "path": "/path/to/repo"
-}
-```
-
-**Output:**
-```json
-{
-  "winner": "claude",
-  "codex_output": "...",
-  "claude_output": "...",
-  "evaluation": {
-    "score_codex": 23,
-    "score_claude": 31,
-    "breakdown_codex": {
-      "clarity": 6,
-      "concrete": 9,
-      "hallucination": 0,
-      "reproducible": 8
-    },
-    "breakdown_claude": {
-      "clarity": 8,
-      "concrete": 12,
-      "hallucination": -5,
-      "reproducible": 16
-    },
-    "reason": "Claude scored higher due to more concrete suggestions..."
-  },
-  "final_recommendation": "Merged recommendation..."
-}
-```
+| Mode | Description |
+|------|-------------|
+| **adversarial** | Agents challenge each other's positions |
+| **consensus** | Agents work to find common ground |
+| **collaborative** | Agents build on each other's ideas |
 
 ## Scoring System
 
-The deterministic judge scores outputs based on:
-
 | Criteria | Points | Max |
 |----------|--------|-----|
-| Clarity (numbered lists, headings, bullets) | +2 each | 10 |
-| Concrete suggestions (code, file refs, line numbers) | +3 each | 15 |
-| Hallucination (non-existent file refs) | -5 each | -25 |
-| Reproducible steps (commands, step markers) | +4 each | 20 |
-
-**Maximum possible score: 45**
-**Minimum possible score: -25**
+| P0 Finding | +15 | 45 |
+| P1 Finding | +8 | 32 |
+| P2 Finding | +3 | 12 |
+| False Positive | -10 | -30 |
+| Concrete Fix | +5 | 25 |
+| File Accuracy | +2 | 10 |
+| Clarity | 0-10 | 10 |
 
 ## Integration
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
 ```json
 {
   "mcpServers": {
-    "debate-reviewer": {
-      "command": "node",
-      "args": ["/path/to/debate-reviewer-mcp/dist/index.js"]
+    "debate-agent": {
+      "command": "debate-agent"
     }
   }
 }
 ```
 
-### Claude Code CLI
+### Claude CLI
 
 ```bash
-claude mcp add debate-reviewer -- node /path/to/debate-reviewer-mcp/dist/index.js
+claude mcp add debate-agent -- debate-agent
 ```
 
-### VS Code (Cline/Continue)
+### VS Code / Cursor
 
-Add to `.vscode/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "debate-reviewer": {
-      "command": "node",
-      "args": ["/path/to/debate-reviewer-mcp/dist/index.js"],
-      "env": {}
-    }
-  }
-}
-```
-
-## Testing
-
-### MCP Inspector
-
-```bash
-# Test with MCP inspector
-npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-### Direct Testing
-
-```bash
-# Run the server directly (will wait for MCP messages on stdin)
-node dist/index.js
-```
-
-## Debate Pipeline
-
-```
-Step A: Gather Diff
-├── Execute `git diff` for uncommitted changes
-└── Parse files changed and diff content
-
-Step B: Run Codex CLI
-├── Format prompt with diff context
-├── Execute codex binary
-└── Capture stdout as output A
-
-Step C: Run Claude Code CLI
-├── Format prompt with diff context
-├── Execute claude binary
-└── Capture stdout as output B
-
-Step D: Optional Critique Round
-├── Run Codex: "Critique this review: {output B}"
-├── Run Claude: "Critique this review: {output A}"
-└── Append critiques to outputs
-
-Step E: Deterministic Judge Scoring
-├── Score clarity, concrete suggestions, hallucinations, reproducibility
-└── Calculate total scores
-
-Step F: Pick Winner
-└── Compare total scores, declare winner
-
-Step G: Generate Merged Recommendation
-├── Extract key points from both outputs
-├── Combine unique suggestions
-└── Format as final recommendation
-```
+Install the VS Code extension - it auto-configures MCP.
 
 ## Development
 
 ```bash
-# Watch mode for development
-pnpm dev
+# Clone repo
+git clone https://github.com/ferdiangunawan/debate-agent-mcp
+cd debate-agent-mcp
 
-# Build
-pnpm build
+# Install dependencies
+npm install
 
-# Run server
-pnpm start
+# Build all packages
+npm run build
+
+# Build specific package
+npm run build:core
+npm run build:server
+npm run build:extension
+```
+
+## Project Structure
+
+```
+debate-agent-mcp/
+├── packages/
+│   ├── core/                    # @debate-agent/core
+│   │   ├── src/
+│   │   │   ├── engine/          # Debate, Judge, Merger, Planner
+│   │   │   ├── prompts/         # Review templates
+│   │   │   ├── tools/           # Git diff, Agent runner
+│   │   │   ├── config.ts
+│   │   │   ├── types.ts
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   ├── mcp-server/              # @debate-agent/mcp-server
+│   │   ├── src/
+│   │   │   ├── index.ts         # MCP server entry
+│   │   │   └── bin/cli.ts       # CLI entry
+│   │   └── package.json
+│   │
+│   └── vscode-extension/        # debate-agent-mcp (VS Code)
+│       ├── src/
+│       │   └── extension.ts
+│       ├── esbuild.js
+│       └── package.json
+│
+├── debate-agent.config.json     # Example config
+├── package.json                 # Monorepo root
+├── pnpm-workspace.yaml
+└── README.md
 ```
 
 ## License

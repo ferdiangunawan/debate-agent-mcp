@@ -1,0 +1,39 @@
+{
+    "name": "@debate-agent/mcp-server",
+    "version": "1.0.0",
+    "description": "MCP server for multi-agent debate with P0/P1/P2 code review and debate planning",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+        "debate-agent": "./dist/bin/cli.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "start": "node dist/index.js",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "debate",
+        "code-review",
+        "multi-agent",
+        "cli"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@debate-agent/core": "*",
+        "@modelcontextprotocol/sdk": "^1.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

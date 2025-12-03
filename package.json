@@ -1,36 +1,38 @@
 {
-  "name": "debate-reviewer-mcp",
+  "name": "debate-agent-mcp",
   "version": "1.0.0",
-  "description": "MCP server for agent debate between CLI-based LLM agents with deterministic judging",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "debate-reviewer-mcp": "dist/index.js"
+  "private": true,
+  "description": "Multi-agent debate MCP - code review & debate planning with P0/P1/P2 severity scoring",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ferdiangunawan/debate-agent-mcp"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "tsc --watch",
-    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "clean": "rm -rf dist"
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w @debate-agent/core",
+    "build:server": "npm run build -w @debate-agent/mcp-server",
+    "build:extension": "npm run build -w debate-agent-mcp",
+    "dev": "npm run dev --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "test": "npm run test --workspaces --if-present",
+    "publish:core": "npm publish -w @debate-agent/core --access public",
+    "publish:server": "npm publish -w @debate-agent/mcp-server --access public",
+    "publish:extension": "npm run package -w debate-agent-mcp && npm run publish -w debate-agent-mcp"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
     "debate",
     "code-review",
-    "llm",
-    "ai-agents"
+    "multi-agent",
+    "ai-agents",
+    "p0-p1-p2"
   ],
-  "author": "",
+  "author": "ferdiangunawan",
   "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  },
   "engines": {
     "node": ">=18.0.0"
   }
