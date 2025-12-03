@@ -1,0 +1,22 @@
+{
+  "agents": {
+    "codex": {
+      "path": "/opt/homebrew/bin/codex",
+      "args": ["exec", "--skip-git-repo-check"],
+      "timeout_seconds": 180
+    },
+    "claude": {
+      "path": "/opt/homebrew/bin/claude",
+      "args": ["--print", "--dangerously-skip-permissions"],
+      "timeout_seconds": 180
+    }
+  },
+  "debate": {
+    "include_critique_round": false,
+    "max_output_length": 10000
+  },
+  "git": {
+    "include_staged": false,
+    "max_diff_lines": 300
+  }
+}

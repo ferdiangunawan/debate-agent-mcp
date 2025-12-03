@@ -1,0 +1,37 @@
+{
+  "name": "debate-reviewer-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for agent debate between CLI-based LLM agents with deterministic judging",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "debate-reviewer-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "debate",
+    "code-review",
+    "llm",
+    "ai-agents"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

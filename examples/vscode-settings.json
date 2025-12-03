@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "debate-reviewer": {
+      "command": "node",
+      "args": ["/Users/ferdiangunawan/Documents/kick_avenue/repo/debate-reviewer-mcp/dist/index.js"],
+      "env": {}
+    }
+  }
+}
