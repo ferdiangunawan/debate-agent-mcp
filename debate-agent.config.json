@@ -1,0 +1,45 @@
+{
+    "agents": {
+        "codex": {
+            "name": "codex",
+            "path": "/opt/homebrew/bin/codex",
+            "args": [
+                "exec",
+                "--skip-git-repo-check"
+            ],
+            "timeout_seconds": 180
+        },
+        "claude": {
+            "name": "claude",
+            "path": "/opt/homebrew/bin/claude",
+            "args": [
+                "--print",
+                "--dangerously-skip-permissions"
+            ],
+            "timeout_seconds": 180
+        }
+    },
+    "debate": {
+        "default_agents": [
+            "codex",
+            "claude"
+        ],
+        "include_critique_round": true,
+        "max_output_length": 10000,
+        "default_mode": "adversarial"
+    },
+    "review": {
+        "severity_enabled": true,
+        "platforms": [
+            "flutter",
+            "android",
+            "ios",
+            "backend",
+            "general"
+        ]
+    },
+    "git": {
+        "include_staged": false,
+        "max_diff_lines": 1000
+    }
+}

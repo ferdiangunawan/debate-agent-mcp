@@ -1,0 +1,11 @@
+# Ignore everything
+**
+
+# Except these files
+!dist/extension.js
+!dist/mcp-server.js
+!package.json
+!README.md
+!LICENSE
+!CHANGELOG.md
+!images/**
