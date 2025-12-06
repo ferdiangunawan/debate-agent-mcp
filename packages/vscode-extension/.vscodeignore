@@ -1,11 +1,18 @@
-# Ignore everything
-**
-
-# Except these files
-!dist/extension.js
-!dist/mcp-server.js
-!package.json
-!README.md
-!LICENSE
-!CHANGELOG.md
-!images/**
+.vscode/**
+.vscode-test/**
+out/**
+node_modules/**
+src/**
+.gitignore
+.yarnrc
+esbuild.js
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/*.ts
+**/.vscode-test.*
+.DS_Store
+**/.DS_Store
+../**
+../../**

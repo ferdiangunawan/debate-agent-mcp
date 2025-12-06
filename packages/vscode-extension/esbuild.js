@@ -37,9 +37,7 @@ const serverBuildOptions = {
     target: 'node18',
     sourcemap: true,
     minify: !isWatch,
-    banner: {
-        js: '#!/usr/bin/env node',
-    },
+    // No banner - source already has shebang, VS Code calls with explicit node path
 };
 
 async function build() {

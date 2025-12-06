@@ -3,7 +3,8 @@
     "displayName": "Debate Agent MCP",
     "description": "Multi-agent code review & debate planning with P0/P1/P2 severity scoring - auto-configures MCP for VS Code",
     "version": "1.0.0",
-    "publisher": "your-publisher-id",
+    "icon": "images/icon.png",
+    "publisher": "FerdianGunawan",
     "repository": {
         "type": "git",
         "url": "https://github.com/ferdiangunawan/debate-agent-mcp"
