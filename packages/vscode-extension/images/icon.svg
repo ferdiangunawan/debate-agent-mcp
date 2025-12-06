@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="url(#bgGrad)"/>
+  <!-- Debate symbol - two speech bubbles -->
+  <g fill="white">
+    <!-- Left bubble -->
+    <path d="M20 35 h35 a8 8 0 0 1 8 8 v20 a8 8 0 0 1 -8 8 h-25 l-10 10 v-10 a8 8 0 0 1 -8 -8 v-20 a8 8 0 0 1 8 -8z" opacity="0.9"/>
+    <!-- Right bubble -->
+    <path d="M65 50 h35 a8 8 0 0 1 8 8 v20 a8 8 0 0 1 -8 8 v10 l-10 -10 h-25 a8 8 0 0 1 -8 -8 v-20 a8 8 0 0 1 8 -8z" opacity="0.9"/>
+  </g>
+  <!-- P0 P1 P2 indicators -->
+  <circle cx="30" cy="100" r="8" fill="#ef4444"/>
+  <circle cx="64" cy="100" r="8" fill="#f59e0b"/>
+  <circle cx="98" cy="100" r="8" fill="#22c55e"/>
+  <text x="30" y="104" text-anchor="middle" font-size="8" font-weight="bold" fill="white">0</text>
+  <text x="64" y="104" text-anchor="middle" font-size="8" font-weight="bold" fill="white">1</text>
+  <text x="98" y="104" text-anchor="middle" font-size="8" font-weight="bold" fill="white">2</text>
+</svg>
