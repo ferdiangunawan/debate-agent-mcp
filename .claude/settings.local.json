@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__debate-reviewer__debate_plan",
+      "mcp__debate-reviewer__debate_360"
+    ]
+  }
+}
