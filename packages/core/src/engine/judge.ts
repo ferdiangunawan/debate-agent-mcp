@@ -256,8 +256,12 @@ export function parseReviewOutput(rawOutput: string): ReviewOutput {
  * Normalize a finding object
  */
 function normalizeFinding(raw: Record<string, unknown>): Finding {
+    const severityValue = typeof raw.severity === "string" ? raw.severity.trim().toUpperCase() : "";
+    const normalizedSeverity: "P0" | "P1" | "P2" =
+        severityValue === "P0" || severityValue === "P1" || severityValue === "P2" ? severityValue : "P2";
+
     return {
-        severity: (raw.severity as string)?.toUpperCase() as "P0" | "P1" | "P2" || "P2",
+        severity: normalizedSeverity,
         title: String(raw.title || "Untitled Issue"),
         file: raw.file ? String(raw.file) : undefined,
         line: raw.line ? Number(raw.line) : undefined,

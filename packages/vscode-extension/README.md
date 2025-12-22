@@ -4,11 +4,12 @@ Multi-agent code review & debate planning with P0/P1/P2 severity scoring.
 
 ## Features
 
-- **Multi-Agent Debate**: Run 2, 3, or more AI agents on your code changes
+- **360 Debate**: Multi-round cross-review where agents review each other until 80% confidence
+- **Two Modes**: `review` (P0/P1/P2 code review) or `plan` (implementation planning)
 - **P0/P1/P2 Severity**: Structured findings with priority levels
 - **Debate Planning**: Create structured debate plans with different modes
 - **Auto-Configuration**: Automatically configures MCP for VS Code
-- **One-Click Install**: Install from marketplace, ready to use
+- **MD Reports**: Comprehensive reports in `.debate/` directory
 
 ## Installation
 
@@ -23,12 +24,29 @@ Multi-agent code review & debate planning with P0/P1/P2 severity scoring.
 | `list_agents` | List all configured agents |
 | `read_diff` | Read git diff from repository |
 | `run_agent` | Run a single agent with prompt |
-| `debate_review` | Multi-agent P0/P1/P2 code review |
+| `debate_review` | Single-round P0/P1/P2 code review |
 | `debate_plan` | Create structured debate plan |
+| `debate_360` | **360 multi-round debate** (modes: `review` or `plan`) |
 
 ## Usage
 
-### With GitHub Copilot Chat
+### 360 Debate - Code Review
+
+```
+@mcp debate_360 question="Review this code for bugs" mode="review"
+```
+
+Output: `.debate/review-TIMESTAMP.md` with P0/P1/P2 findings
+
+### 360 Debate - Implementation Planning
+
+```
+@mcp debate_360 question="Plan how to add authentication" mode="plan"
+```
+
+Output: `.debate/plan-TIMESTAMP.md` with implementation steps
+
+### Single Round Review
 
 ```
 @mcp debate_review question="Review this code for security issues"

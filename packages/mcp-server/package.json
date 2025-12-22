@@ -26,7 +26,7 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
-        "@debate-agent/core": "*",
+        "@debate-agent/core": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.0.0"
     },
     "devDependencies": {

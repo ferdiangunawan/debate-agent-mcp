@@ -96,17 +96,16 @@ Step 5: Merge & Report
 └── Generate final recommendation
 ```
 
-## Roadmap
+## 360 Debate Feature (v2.0)
 
-### Current (v1.0) - Single Review Round
-```
-Claude ──┐
-         ├──► Parallel Review ──► Score ──► Merge ──► Final Report
-Codex  ──┘
-```
+The 360 Debate feature provides **multi-turn cross-review** with confidence scoring. It supports two modes:
 
-### Future Goal - Multi-Turn Cross-Review
-> Eliminate hallucinations through adversarial validation
+| Mode | Description | Output |
+|------|-------------|--------|
+| **review** | P0/P1/P2 code review findings | `.debate/review-TIMESTAMP.md` |
+| **plan** | Implementation planning with consensus | `.debate/plan-TIMESTAMP.md` |
+
+### 360 Debate Pipeline
 
 ```
 Round 1: Initial Review (Parallel)
@@ -116,41 +115,89 @@ Round 1: Initial Review (Parallel)
 └────┬────┘     └────┬────┘
      │               │
      ▼               ▼
-Round 2: Cross-Review (Each agent reviews the other's findings)
+Round 2: 360 Cross-Review (Each agent reviews ALL others)
 ┌─────────────────────────────────────────┐
 │ Claude reviews Codex's findings         │
+│ Codex reviews Claude's findings         │
 │ "Is P0 about null pointer valid?"       │
 │ "Did Codex miss the SQL injection?"     │
 └─────────────────────────────────────────┘
+     │
+     ▼
+Confidence Check: >= 80%?
+     │
+     ├── No ──► Repeat (max 3 rounds)
+     │
+     ▼ Yes
+Winner Composition
 ┌─────────────────────────────────────────┐
-│ Codex reviews Claude's findings         │
-│ "Is the race condition real?"           │
-│ "False positive on line 42?"            │
-└─────────────────────────────────────────┘
-     │               │
-     ▼               ▼
-Round 3: Consensus Building
-┌─────────────────────────────────────────┐
-│ Only findings validated by BOTH agents  │
-│ Hallucinations eliminated               │
-│ Disputed findings flagged for human     │
+│ Highest scoring agent composes final    │
+│ Merge valid findings, eliminate dupes   │
+│ Document elimination reasons            │
 └─────────────────────────────────────────┘
      │
      ▼
-Final: Validated Review
+Validation Phase
 ┌─────────────────────────────────────────┐
-│ High-confidence findings (both agreed)  │
-│ Disputed findings (need human review)   │
-│ Eliminated findings (proven false)      │
-│ Combined score from validation rounds   │
+│ Other agents vote: approve/reject       │
+│ Majority approval required              │
+│ Winner breaks ties                      │
 └─────────────────────────────────────────┘
+     │
+     ▼
+Final Report: .debate/review-*.md or .debate/plan-*.md
 ```
 
-**Goal**: By having agents review each other's work, we can:
-- Eliminate hallucinated findings (one agent invents issues that don't exist)
-- Catch missed issues (one agent finds what the other missed)
-- Build confidence scores (findings validated by multiple agents are more reliable)
+### Review Mode Example
+
+```typescript
+// Run 360 code review
+const result = await runDebate360({
+  question: 'Review this code for security issues',
+  mode: 'review',  // P0/P1/P2 severity scoring
+  agents: ['claude', 'codex'],
+  platform: 'backend',
+  maxRounds: 3,
+  confidenceThreshold: 80,
+});
+
+// Output: .debate/review-2025-01-20T10-30-00.md
+console.log(result.finalFindings);  // Validated P0/P1/P2 findings
+```
+
+### Plan Mode Example
+
+```typescript
+// Run 360 implementation planning
+const result = await runDebate360({
+  question: 'Plan how to add user authentication',
+  mode: 'plan',  // Consensus-based, no severity
+  agents: ['claude', 'codex'],
+  maxRounds: 3,
+  confidenceThreshold: 80,
+});
+
+// Output: .debate/plan-2025-01-20T10-30-00.md
+console.log(result.finalPlan);  // Validated implementation steps
+```
+
+### Mode Comparison
+
+| Aspect | Review Mode | Plan Mode |
+|--------|-------------|-----------|
+| **Purpose** | Find bugs, security issues | Plan implementation approach |
+| **Scoring** | P0/P1/P2 severity (max 134 pts) | Clarity + Consensus (0-100) |
+| **Output** | Findings with fix suggestions | Implementation steps with phases |
+| **Winner** | Highest severity score | Highest consensus + clarity |
+| **Final Result** | Merged P0/P1/P2 findings | Merged implementation plan |
+| **MD File** | `review-TIMESTAMP.md` | `plan-TIMESTAMP.md` |
+
+**Benefits of 360 Debate**:
+- Eliminate hallucinated findings (validated by multiple agents)
+- Catch missed issues (one agent finds what another missed)
+- Build confidence scores (80% threshold ensures agreement)
 - Reduce false positives (adversarial review catches incorrect assessments)
+- Comprehensive report in `.debate/` directory
 
 ---
 
@@ -231,8 +278,9 @@ const plan = createDebatePlan('Best caching strategy', ['codex', 'claude'], 'col
 | `list_agents` | List all configured agents |
 | `read_diff` | Read uncommitted git diff |
 | `run_agent` | Run a single agent with prompt |
-| `debate_review` | Multi-agent P0/P1/P2 code review |
+| `debate_review` | Multi-agent P0/P1/P2 code review (single round) |
 | `debate_plan` | Create structured debate plan |
+| `debate_360` | **360 multi-round debate with modes: `review` (P0/P1/P2) or `plan` (consensus)** |
 
 ## Configuration
 
@@ -407,7 +455,7 @@ npm run build:extension
 - **Local CLIs required**: You must have `claude` and `codex` CLIs installed and authenticated
 - **Timeout risks**: Long diffs may cause agent timeouts (default 180s)
 - **No streaming**: Currently waits for full response before processing
-- **Single critique round**: Future versions will support multi-turn validation
+- **Minimum 2 agents**: 360 debate requires at least 2 agents for cross-review
 
 ## Contributing
 
