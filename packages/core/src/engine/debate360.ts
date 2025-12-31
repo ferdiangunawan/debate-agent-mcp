@@ -561,7 +561,6 @@ async function runReviewDebate360(options: Debate360Options): Promise<Debate360R
 
     // Continue with only working agents for the debate
     agentOutputs = workingAgents;
-
     // 360 debate loop
     while (confidence < confidenceThreshold && currentRound <= maxRounds) {
         // Run 360 cross-review
