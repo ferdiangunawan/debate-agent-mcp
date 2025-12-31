@@ -3,27 +3,28 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { spawnSync } from "child_process";
+import { join, dirname, isAbsolute } from "path";
 import { fileURLToPath } from "url";
-import type { Config, AgentConfig, DebateConfig, ReviewConfig, GitConfig } from "./types.js";
+import type { Config, AgentConfig, DebateConfig, ReviewConfig, GitConfig, AgentHealthResult } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Default configuration
+// Default configuration with increased timeouts for reliability
 const DEFAULT_CONFIG: Config = {
     agents: {
         codex: {
             name: "codex",
             path: "/opt/homebrew/bin/codex",
             args: ["exec", "--skip-git-repo-check"],
-            timeout_seconds: 180,
+            timeout_seconds: 300, // 5 minutes (increased from 3)
         },
         claude: {
             name: "claude",
             path: "/opt/homebrew/bin/claude",
             args: ["--print", "--dangerously-skip-permissions"],
-            timeout_seconds: 180,
+            timeout_seconds: 300, // 5 minutes (increased from 3)
         },
     },
     debate: {
@@ -180,4 +181,155 @@ export function validateAgents(agentNames: string[]): void {
  */
 export function clearConfigCache(): void {
     cachedConfig = null;
+}
+
+/**
+ * Check if an agent is healthy and responsive
+ *
+ * Uses spawnSync with shell:false for cross-platform compatibility and security.
+ * Treats execution failures (ENOENT, EACCES, etc.) as unhealthy.
+ */
+export function checkAgentHealth(agentName: string): AgentHealthResult {
+    const startTime = Date.now();
+
+    try {
+        const config = getAgentConfig(agentName);
+
+        // Check if binary exists only when a path is explicitly provided.
+        // For PATH-based commands (e.g., "codex"), let spawnSync resolve it.
+        const hasPathSeparator = config.path.includes("/") || config.path.includes("\\");
+        if ((hasPathSeparator || isAbsolute(config.path)) && !existsSync(config.path)) {
+            return {
+                agent: agentName,
+                healthy: false,
+                error: `Binary not found: ${config.path}`,
+                latency_ms: Date.now() - startTime,
+            };
+        }
+
+        // Try --version first (most common), then --help as fallback
+        // Using spawnSync with shell:false for security and cross-platform support
+        const versionResult = spawnSync(config.path, ["--version"], {
+            timeout: 10000, // 10 second timeout for health check
+            stdio: "pipe",
+            shell: false,
+        });
+
+        // Check if the binary executed successfully
+        if (versionResult.error) {
+            // ENOENT = binary not found or not executable
+            // EACCES = permission denied
+            const errorCode = (versionResult.error as NodeJS.ErrnoException).code;
+            if (errorCode === "ENOENT" || errorCode === "EACCES") {
+                return {
+                    agent: agentName,
+                    healthy: false,
+                    error: `Cannot execute binary: ${errorCode} - ${config.path}`,
+                    latency_ms: Date.now() - startTime,
+                };
+            }
+
+            // Timeout is also unhealthy
+            if (errorCode === "ETIMEDOUT") {
+                return {
+                    agent: agentName,
+                    healthy: false,
+                    error: `Health check timed out for ${config.path}`,
+                    latency_ms: Date.now() - startTime,
+                };
+            }
+
+            // Try --help as fallback for other errors (some CLIs don't support --version)
+            const helpResult = spawnSync(config.path, ["--help"], {
+                timeout: 10000,
+                stdio: "pipe",
+                shell: false,
+            });
+
+            if (helpResult.error) {
+                const helpErrorCode = (helpResult.error as NodeJS.ErrnoException).code;
+                return {
+                    agent: agentName,
+                    healthy: false,
+                    error: `Cannot execute binary: ${helpErrorCode} - ${config.path}`,
+                    latency_ms: Date.now() - startTime,
+                };
+            }
+        }
+
+        // Binary executed (even if it returned non-zero exit code)
+        // This means the binary is accessible and runnable
+        return {
+            agent: agentName,
+            healthy: true,
+            latency_ms: Date.now() - startTime,
+        };
+    } catch (error) {
+        return {
+            agent: agentName,
+            healthy: false,
+            error: error instanceof Error ? error.message : String(error),
+            latency_ms: Date.now() - startTime,
+        };
+    }
+}
+
+/**
+ * Check health of all configured agents
+ */
+export function checkAllAgentsHealth(): AgentHealthResult[] {
+    const agentNames = getAgentNames();
+    return agentNames.map(checkAgentHealth);
+}
+
+/**
+ * Get list of healthy agents from the provided list
+ */
+export function getHealthyAgents(agentNames: string[]): string[] {
+    const results = agentNames.map(checkAgentHealth);
+    const healthy = results.filter(r => r.healthy).map(r => r.agent);
+    const unhealthy = results.filter(r => !r.healthy);
+
+    if (unhealthy.length > 0) {
+        console.error(`[Config] Unhealthy agents: ${unhealthy.map(u => `${u.agent} (${u.error})`).join(", ")}`);
+    }
+
+    return healthy;
+}
+
+/**
+ * Validate agents and return only healthy ones, with minimum count check
+ */
+export function validateAndFilterAgents(
+    agentNames: string[],
+    minRequired: number = 2
+): { agents: string[]; warnings: string[] } {
+    const warnings: string[] = [];
+
+    // First validate they exist in config
+    const available = getAgentNames();
+    const validAgents = agentNames.filter(name => {
+        if (!available.includes(name)) {
+            warnings.push(`Agent "${name}" not configured, skipping`);
+            return false;
+        }
+        return true;
+    });
+
+    // Then check health
+    const healthyAgents = getHealthyAgents(validAgents);
+    const unhealthyCount = validAgents.length - healthyAgents.length;
+
+    if (unhealthyCount > 0) {
+        warnings.push(`${unhealthyCount} agent(s) are unhealthy and will be skipped`);
+    }
+
+    if (healthyAgents.length < minRequired) {
+        warnings.push(
+            `Only ${healthyAgents.length} healthy agent(s) available, ` +
+            `minimum ${minRequired} required for debate`
+        );
+    }
+
+    return { agents: healthyAgents, warnings };
 }
