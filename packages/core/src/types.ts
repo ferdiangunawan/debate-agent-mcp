@@ -11,12 +11,32 @@ export type Platform = "flutter" | "android" | "ios" | "backend" | "general";
 // Debate modes
 export type DebateMode = "consensus" | "adversarial" | "collaborative";
 
+// Retry configuration for agent execution
+export interface RetryConfig {
+    /** Maximum number of retry attempts (0 = no retries) */
+    maxRetries: number;
+    /** Base delay in milliseconds for exponential backoff */
+    baseDelayMs: number;
+    /** Maximum delay in milliseconds */
+    maxDelayMs: number;
+}
+
 // Agent configuration
 export interface AgentConfig {
     name: string;
     path: string;
     args: string[];
     timeout_seconds: number;
+    /** Optional retry configuration override */
+    retry?: RetryConfig;
+}
+
+// Agent health check result
+export interface AgentHealthResult {
+    agent: string;
+    healthy: boolean;
+    error?: string;
+    latency_ms?: number;
 }
 
 // Debate configuration

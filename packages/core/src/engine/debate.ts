@@ -14,7 +14,7 @@ import { readDiff } from "../tools/read-diff.js";
 import { runAgentForReview, runAgentForCritique } from "../tools/run-agent.js";
 import { scoreReviewOutput, parseReviewOutput, generateScoringReason } from "./judge.js";
 import { generateMergedRecommendation } from "./merger.js";
-import { getDebateConfig, getDefaultAgents, validateAgents } from "../config.js";
+import { getDebateConfig, getDefaultAgents, validateAndFilterAgents } from "../config.js";
 
 /**
  * Run the full debate pipeline with N agents
@@ -29,15 +29,23 @@ import { getDebateConfig, getDefaultAgents, validateAgents } from "../config.js"
  */
 export async function runDebate(options: DebateOptions): Promise<DebateResult> {
     const config = getDebateConfig();
-    const agents = options.agents || getDefaultAgents();
+    const requestedAgents = options.agents || getDefaultAgents();
     const includeCritique = options.includeCritique ?? config.include_critique_round;
     const platform = options.platform || "general";
 
-    // Validate agents exist
-    validateAgents(agents);
+    // Validate agents exist and filter to healthy ones
+    const { agents, warnings } = validateAndFilterAgents(requestedAgents, 2);
+
+    // Log any warnings
+    for (const warning of warnings) {
+        console.error(`[Debate] Warning: ${warning}`);
+    }
 
     if (agents.length < 2) {
-        throw new Error("At least 2 agents are required for a debate");
+        throw new Error(
+            "At least 2 healthy agents are required for a debate. " +
+            `Only ${agents.length} healthy agent(s) available from requested: ${requestedAgents.join(", ")}`
+        );
     }
 
     // Step A: Gather uncommitted diff

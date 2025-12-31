@@ -7,7 +7,7 @@
                 "exec",
                 "--skip-git-repo-check"
             ],
-            "timeout_seconds": 180
+            "timeout_seconds": 300
         },
         "claude": {
             "name": "claude",
@@ -16,7 +16,7 @@
                 "--print",
                 "--dangerously-skip-permissions"
             ],
-            "timeout_seconds": 180
+            "timeout_seconds": 300
         }
     },
     "debate": {
