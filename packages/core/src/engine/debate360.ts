@@ -37,7 +37,7 @@ import {
 } from "./confidence.js";
 import { runWinnerComposition, runValidation } from "./validator.js";
 import { writeDebateReport, writePlanReport } from "./reporter.js";
-import { getDefaultAgents, validateAgents } from "../config.js";
+import { getDefaultAgents, validateAndFilterAgents } from "../config.js";
 import { runPlanDebate360 } from "./plan-debate360.js";
 
 // Default configuration
@@ -386,22 +386,103 @@ export async function runDebate360(options: Debate360Options): Promise<Debate360
 }
 
 /**
+ * Build a single-agent result when only one agent is available
+ * This provides graceful degradation instead of failing
+ */
+function buildSingleAgentResult(
+    agentOutput: AgentDebateOutput,
+    question: string,
+    diffResult: DiffResult,
+    startTime: number,
+    outputDir: string
+): Debate360Result {
+    console.error(`[360 Debate] Running in single-agent mode (no cross-review)`);
+
+    const score = scoreReviewOutput(agentOutput.review, diffResult.files);
+    agentOutput.score = score;
+
+    const result: Debate360Result = {
+        winner: agentOutput.agent,
+        rounds: [{
+            round: 1,
+            reviews: [agentOutput],
+            critiques: [],
+            scores: { [agentOutput.agent]: score },
+            confidence: 50, // Low confidence for single-agent mode
+            agreementMatrix: {},
+        }],
+        composed: {
+            composer: agentOutput.agent,
+            proposedFindings: agentOutput.review.findings,
+            eliminatedFindings: [],
+            eliminationReasons: {},
+            residualRisks: agentOutput.review.residual_risks,
+            openQuestions: agentOutput.review.open_questions,
+            rawOutput: agentOutput.output,
+        },
+        validation: {
+            votes: [],
+            approvedFindings: agentOutput.review.findings,
+            rejectedFindings: [],
+            tieFindings: [],
+        },
+        finalFindings: agentOutput.review.findings,
+        finalResidualRisks: [
+            ...agentOutput.review.residual_risks,
+            "⚠️ Single-agent mode: findings not cross-validated by other agents",
+        ],
+        finalOpenQuestions: agentOutput.review.open_questions,
+        confidence: 50,
+        reportPath: "",
+        totalDuration_ms: Date.now() - startTime,
+    };
+
+    const reportPath = writeDebateReport({
+        result,
+        question,
+        agents: [agentOutput.agent],
+        outputDir,
+    });
+
+    result.reportPath = reportPath;
+    console.error(`[360 Debate] Single-agent report: ${reportPath}`);
+
+    return result;
+}
+
+/**
  * Run the review mode 360 debate pipeline (P0/P1/P2)
  */
 async function runReviewDebate360(options: Debate360Options): Promise<Debate360Result> {
     const startTime = Date.now();
 
     // Configuration
-    const agents = options.agents || getDefaultAgents();
+    const requestedAgents = options.agents || getDefaultAgents();
     const maxRounds = options.maxRounds || DEFAULT_MAX_ROUNDS;
     const confidenceThreshold = options.confidenceThreshold || DEFAULT_CONFIDENCE_THRESHOLD;
     const platform = options.platform || "general";
     const onProgress = options.onProgress;
+    const outputDir = options.path ? `${options.path}/.debate` : ".debate";
 
-    // Validate
-    validateAgents(agents);
-    if (agents.length < 2) {
-        throw new Error("At least 2 agents are required for a 360 debate");
+    // Validate and filter to healthy agents only (with minimum of 1 for graceful degradation)
+    const { agents, warnings } = validateAndFilterAgents(requestedAgents, 1);
+
+    // Log any warnings
+    for (const warning of warnings) {
+        console.error(`[360 Debate] Warning: ${warning}`);
+    }
+
+    if (agents.length === 0) {
+        throw new Error(
+            "No healthy agents available. " +
+            `Requested agents: ${requestedAgents.join(", ")}. ` +
+            "Please check agent configuration and ensure binaries are accessible."
+        );
+    }
+
+    const isSingleAgentMode = agents.length === 1;
+    if (isSingleAgentMode) {
+        console.error(`[360 Debate] Only 1 healthy agent available - running in single-agent mode`);
     }
 
     // Initialize
@@ -448,19 +529,38 @@ async function runReviewDebate360(options: Debate360Options): Promise<Debate360R
         onProgress
     );
 
-    // Validate: require at least 2 agents with valid output
+    // Check how many agents produced valid output
     const workingAgents = agentOutputs.filter(isValidAgentOutput);
-    if (workingAgents.length < 2) {
-        const failedAgents = agentOutputs.filter(o => !isValidAgentOutput(o)).map(o => o.agent);
+    const failedAgents = agentOutputs.filter(o => !isValidAgentOutput(o)).map(o => o.agent);
+
+    if (failedAgents.length > 0) {
+        console.error(`[360 Debate] Failed agents: ${failedAgents.join(", ")}`);
+    }
+
+    // Graceful degradation: if only one agent works, use single-agent mode
+    if (workingAgents.length === 0) {
         throw new Error(
-            `360 debate requires at least 2 working agents. ` +
-            `Only ${workingAgents.length} agent(s) produced valid output. ` +
-            `Failed agents: ${failedAgents.join(", ")}. ` +
-            `Check agent timeouts and ensure agents are properly configured.`
+            "No agents produced valid output. " +
+            `All ${agents.length} agent(s) failed. ` +
+            "Check agent configuration, timeouts, and ensure agents are working."
         );
     }
+
+    if (workingAgents.length === 1) {
+        console.error(`[360 Debate] Only 1 agent produced valid output - falling back to single-agent mode`);
+        return buildSingleAgentResult(
+            workingAgents[0],
+            options.question,
+            diffResult,
+            startTime,
+            outputDir
+        );
+    }
+
     console.error(`[360 Debate] ${workingAgents.length}/${agents.length} agents produced valid output`);
 
+    // Continue with only working agents for the debate
+    agentOutputs = workingAgents;
     // 360 debate loop
     while (confidence < confidenceThreshold && currentRound <= maxRounds) {
         // Run 360 cross-review
@@ -532,7 +632,25 @@ async function runReviewDebate360(options: Debate360Options): Promise<Debate360R
             const newWorkingAgents = agentOutputs.filter(isValidAgentOutput);
             if (newWorkingAgents.length < 2) {
                 console.error(`[360 Debate] Warning: Only ${newWorkingAgents.length} agents working in round ${currentRound}`);
+
+                if (newWorkingAgents.length === 0) {
+                    throw new Error(`All agents failed in round ${currentRound}`);
+                }
+
+                // If we've fallen to single agent mid-debate, return single-agent result immediately
+                // This avoids inconsistent state in validation phase which expects 2+ agents
+                if (newWorkingAgents.length === 1) {
+                    console.error(`[360 Debate] Falling back to single-agent mode mid-debate`);
+                    return buildSingleAgentResult(
+                        newWorkingAgents[0],
+                        options.question,
+                        diffResult,
+                        startTime,
+                        outputDir
+                    );
+                }
             }
+            agentOutputs = newWorkingAgents;
         } else {
             break;
         }
@@ -617,11 +735,14 @@ async function runReviewDebate360(options: Debate360Options): Promise<Debate360R
         totalDuration_ms: Date.now() - startTime,
     };
 
+    // Use the agents that actually participated (working agents only)
+    const participatingAgents = agentOutputs.map(o => o.agent);
+
     const reportPath = writeDebateReport({
         result,
         question: options.question,
-        agents,
-        outputDir: options.path ? `${options.path}/.debate` : ".debate",
+        agents: participatingAgents,
+        outputDir,
     });
 
     result.reportPath = reportPath;
