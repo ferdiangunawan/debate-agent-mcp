@@ -20,6 +20,11 @@ export {
     getDefaultAgents,
     validateAgents,
     clearConfigCache,
+    // Health check utilities
+    checkAgentHealth,
+    checkAllAgentsHealth,
+    getHealthyAgents,
+    validateAndFilterAgents,
 } from "./config.js";
 
 // Engine
